@@ -255,6 +255,12 @@ def get_pdf_path():
         pdf_files = [f for f in os.listdir(DEFAULT_INPUT_DIR) if f.endswith('.pdf')]
         
         if pdf_files:
+            # If there's only one PDF file, use it automatically
+            if len(pdf_files) == 1:
+                pdf_path = f"{DEFAULT_INPUT_DIR}/{pdf_files[0]}"
+                print(f"Using the only available PDF: {pdf_files[0]}")
+                return pdf_path
+                
             print("Available PDF files:")
             for i, file in enumerate(pdf_files, 1):
                 print(f"{i}. {file}")
@@ -292,8 +298,18 @@ def main():
         "--analyze", help="Analyze annotations from the specified JSON file"
     )
     parser.add_argument("--all", help="Process the specified PDF file completely")
+    parser.add_argument(
+        "pdf", nargs="?", help="PDF file to process (optional)"
+    )
 
     args = parser.parse_args()
+    
+    # If a PDF file is provided as a positional argument, use it
+    if args.pdf and os.path.isfile(args.pdf) and args.pdf.lower().endswith('.pdf'):
+        # Override the default input directory with the directory of the provided PDF
+        global DEFAULT_INPUT_DIR
+        DEFAULT_INPUT_DIR = os.path.dirname(os.path.abspath(args.pdf))
+        pdf_path = args.pdf
 
     # If command line arguments are provided, run the corresponding function
     if args.text:
@@ -321,6 +337,12 @@ def main():
         else:
             print(f"Error: The file {pdf_path} does not exist")
         return
+    elif args.pdf:
+        # If only a PDF file is provided without specific action, show menu but use the PDF
+        pdf_path = args.pdf
+        if not file_exists(pdf_path):
+            print(f"Error: The file {pdf_path} does not exist")
+            return
 
     # Interactive menu
     while True:

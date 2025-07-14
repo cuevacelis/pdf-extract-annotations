@@ -77,7 +77,7 @@ class PDFAnnotationExtractor:
             annot_type = annot.type[1] if annot.type else "Unknown"
 
             # Get annotation content
-            content = annotation_info.get("content", "")
+            content_annotation = annotation_info.get("content", "")
 
             # Get annotation coordinates
             rect = annot.rect
@@ -119,7 +119,7 @@ class PDFAnnotationExtractor:
             annotation_data = {
                 "page": page_num,
                 "type": annot_type,
-                "content": content,
+                "contentAnnotation": content_annotation,
                 "author": author,
                 "subject": subject,
                 "creation_date": creation_date,
@@ -132,6 +132,11 @@ class PDFAnnotationExtractor:
                 highlighted_text = self._extract_highlighted_text(annot)
                 if highlighted_text:
                     annotation_data["highlighted_text"] = highlighted_text
+                    
+                # Find nearby title for all annotations
+                nearby_title = self._find_nearby_title(annot)
+                if nearby_title:
+                    annotation_data["nearby_title"] = nearby_title
 
             return annotation_data
 
@@ -174,6 +179,69 @@ class PDFAnnotationExtractor:
 
         except Exception as e:
             print(f"Error extracting highlighted text: {e}", file=sys.stderr)
+            return ""
+            
+    def _find_nearby_title(self, annot) -> str:
+        """
+        Find the nearest title or subtitle above the annotation.
+        
+        Args:
+            annot: PyMuPDF annotation object
+            
+        Returns:
+            str: Nearby title or subtitle text
+        """
+        try:
+            # Get the page
+            page = annot.parent
+            
+            # Get annotation coordinates
+            rect = annot.rect
+            annot_y = rect.y0  # Top y-coordinate of annotation
+            
+            # Get all text blocks on the page
+            page_dict = page.get_text("dict")
+            
+            # Find potential titles above the annotation
+            potential_titles = []
+            
+            for block in page_dict.get("blocks", []):
+                if "lines" not in block:
+                    continue
+                    
+                # Get block coordinates
+                block_y = block["bbox"][1]  # Top y-coordinate of block
+                
+                # Only consider blocks above the annotation
+                if block_y >= annot_y:
+                    continue
+                    
+                # Extract text from the block
+                block_text = ""
+                for line in block["lines"]:
+                    for span in line.get("spans", []):
+                        # Check if this might be a title (larger font or bold)
+                        font_size = span.get("size", 0)
+                        font_flags = span.get("flags", 0)
+                        is_bold = font_flags & 2 > 0  # Check if bold flag is set
+                        
+                        # Consider it a potential title if font is larger or bold
+                        if font_size > 10 or is_bold:
+                            block_text += span.get("text", "")
+                
+                if block_text.strip():
+                    # Store the text and its distance from the annotation
+                    distance = annot_y - block_y
+                    potential_titles.append((block_text.strip(), distance))
+            
+            # Sort by distance (closest first)
+            potential_titles.sort(key=lambda x: x[1])
+            
+            # Return the closest title, or empty string if none found
+            return potential_titles[0][0] if potential_titles else ""
+            
+        except Exception as e:
+            print(f"Error finding nearby title: {e}", file=sys.stderr)
             return ""
 
     def save_to_json(self, annotations: List[Dict[str, Any]], output_path: str) -> None:
@@ -225,10 +293,13 @@ class PDFAnnotationExtractor:
                 print(f"   Author: {annot['author']}")
             if annot["subject"]:
                 print(f"   Subject: {annot['subject']}")
-            if annot["content"]:
-                print(f"   Content: {annot['content']}")
+            if annot["contentAnnotation"]:
+                print(f"   Content Annotation: {annot['contentAnnotation']}")
             if annot.get("highlighted_text"):
                 print(f"   Highlighted text: {annot['highlighted_text']}")
+            if annot.get("nearby_title"):
+                print(f"   Nearby title: {annot['nearby_title']}")
+
 
 
 def main():
