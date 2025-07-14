@@ -1,0 +1,8 @@
+[project]
+name = "pdf-extract"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.10"
+dependencies = [
+    "pymupdf==1.23.14",
+]
