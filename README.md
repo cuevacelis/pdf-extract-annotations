@@ -2,6 +2,15 @@
 
 Una herramienta de línea de comandos para extraer texto y anotaciones de archivos PDF utilizando PyMuPDF.
 
+
+## 🖼️ Captura de Pantalla
+
+Menú principal de la aplicación:
+
+<div align="center">
+   <img src="public/main-menu.png" alt="Menú principal" width="500"/>
+</div>
+
 ## 📋 Características
 
 - ✅ **Extracción de texto**: Extrae todo el texto de archivos PDF
