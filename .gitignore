@@ -44,6 +44,9 @@ coverage.xml
 .dmypy.json
 dmypy.json
 
+# Input files
+data/input/
+
 # Output files
 data/output/
 
